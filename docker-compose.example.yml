@@ -1,0 +1,35 @@
+# WeatherStar 4000+ as a Jellyfin Live TV channel
+# Tested 2026-10-21: ws4kp 8.0.1, ws4channels 2.5.1, Jellyfin 10.11.11, x86_64 Ubuntu 24.04 host.
+#
+# Replace before use:
+#   192.168.1.50   -> the LAN IP of the Docker host running this file
+#   PERMALINK_URL  -> your own permalink from the ws4kp page, with kiosk=true (see README step 2)
+
+services:
+  ws4kp:
+    # Upstream tags look like 8.0.1 (no "v"). Pinning the digest as well stops a re-pull from changing it.
+    image: ghcr.io/netbymatt/ws4kp:8.0.1@sha256:9a05b6d580b5c43c4956a10a2acfe8ac2b0c2fda0974b06a94fee8167ead5f2f
+    container_name: ws4kp
+    ports:
+      - 8089:8080
+    restart: unless-stopped
+
+  ws4channels:
+    # Upstream only publishes :latest. This digest is 2.5.1; pin whatever you test.
+    image: ghcr.io/rice9797/ws4channels@sha256:a448e73568a750d952185e72e7b4c8e18de05a21d8d2b09c70c62a7fe3cf2e39
+    container_name: ws4channels
+    depends_on: [ws4kp]
+    ports:
+      - 9798:9798
+    environment:
+      # ZIP_CODE, WS4KP_HOST and WS4KP_PORT are only used when PERMALINK_URL is NOT set.
+      ZIP_CODE: "90210"
+      WS4KP_HOST: "192.168.1.50"
+      WS4KP_PORT: "8089"
+      # Must not exceed what your host can actually capture. See README "Pick FRAME_RATE".
+      FRAME_RATE: "4"
+      # Single quotes matter: the URL is full of & and %.
+      PERMALINK_URL: 'http://192.168.1.50:8089/?REPLACE_WITH_YOUR_PERMALINK&kiosk=true'
+    mem_limit: 1096m
+    cpus: 2.0
+    restart: unless-stopped
